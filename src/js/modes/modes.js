@@ -56,7 +56,10 @@ const MODES = {
   pedagogy:  { name: 'Pédagogie', icon: '🎓', color: '#8B4513', desc: 'Quiz par niveau scolaire', dur: 'Variable', works: 50 },
   histoires: { name: 'Histoires', icon: '📖', color: '#9B59B6', desc: 'Histoires vraies d\'Alma', dur: '30 min', works: 8 },
   creative:  { name: 'Mission Créative', icon: '🎨', color: '#16A085', desc: 'Crée autour des œuvres', dur: '3 heures', works: 10 },
-  thematic:  { name: 'Thématique Saisonnière', icon: '❄️', color: '#3498DB', desc: 'Œuvres selon la saison', dur: '45 min', works: 12 }
+  thematic:  { name: 'Thématique Saisonnière', icon: '❄️', color: '#3498DB', desc: 'Œuvres selon la saison', dur: '45 min', works: 12 },
+  trivia:    { name: 'Trivia Express', icon: '⚡', color: '#E67E22', desc: '10 questions en 60s', dur: '1 min', works: 10 },
+  gallery:   { name: 'Galerie Photo', icon: '🖼️', color: '#1ABC9C', desc: 'Tes œuvres préférées', dur: 'Libre', works: 50 },
+  teacher:   { name: 'Tableau Prof', icon: '👩‍🏫', color: '#34495E', desc: 'Dashboard enseignant', dur: 'Live', works: 50 }
 };
 
 let currentMode = null;
@@ -88,7 +91,8 @@ function startMode(modeId) {
   switchView(modeId + 'View');
   const starters = {
     guided: startGuided, battle: startBattle, photo: startPhoto, timeattack: startTimeAttack,
-    pedagogy: startPedagogy, histoires: startHistoires, creative: startCreative, thematic: startThematic
+    pedagogy: startPedagogy, histoires: startHistoires, creative: startCreative, thematic: startThematic,
+    trivia: startTrivia, gallery: startGallery, teacher: startTeacher
   };
   if (starters[modeId]) starters[modeId]();
 }
@@ -643,4 +647,183 @@ function startThematic() {
       if (parseInt($get('thematicCurrent').textContent) >= 12) completeMode();
     });
   });
+}
+
+// ============================================================
+// MODE 9 — TRIVIA EXPRESS (NEW)
+// ============================================================
+function startTrivia() {
+  state.currentMode.triviaScore = 0;
+  state.currentMode.triviaIdx = 0;
+  state.currentMode.totalQ = 10;
+
+  showView('triviaView', `
+    <header class="mode-header" style="background:${MODES.trivia.color}">
+      ${backBtn('trivia')}
+      <h2>⚡ Trivia Express</h2>
+      <p>10 questions, 60 secondes chacune</p>
+    </header>
+    <div class="mode-content">
+      <div class="trivia-progress">
+        <span id="triviaCurrent">0</span>/<span id="triviaTotal">10</span>
+        · Score : <span id="triviaScore">0</span>
+      </div>
+      <div class="trivia-question" id="triviaQuestion"></div>
+      <div class="trivia-choices" id="triviaChoices"></div>
+    </div>
+  `);
+  nextTriviaQuestion();
+}
+
+function nextTriviaQuestion() {
+  const m = state.currentMode;
+  if (m.triviaIdx >= m.totalQ) return endTrivia();
+  const work = WORKS_DATA[Math.floor(Math.random() * WORKS_DATA.length)];
+  if (!work.quiz) return nextTriviaQuestion();
+  $get('triviaCurrent').textContent = m.triviaIdx + 1;
+  $get('triviaTotal').textContent = m.totalQ;
+  $get('triviaQuestion').textContent = work.quiz.question;
+  $get('triviaChoices').innerHTML = work.quiz.choices.map((c, i) =>
+    `<button class="trivia-choice" data-choice="${i}" data-correct="${work.quiz.correct}">${String.fromCharCode(65 + i)}. ${c}</button>`
+  ).join('');
+
+  let timeLeft = 6;
+  if (m.triviaTimer) clearInterval(m.triviaTimer);
+  m.triviaTimer = setInterval(() => {
+    if (--timeLeft <= 0) {
+      clearInterval(m.triviaTimer);
+      m.triviaIdx++;
+      nextTriviaQuestion();
+    }
+  }, 1000);
+
+  document.querySelectorAll('.trivia-choice').forEach(btn =>
+    btn.addEventListener('click', () => {
+      clearInterval(m.triviaTimer);
+      const choice = parseInt(btn.dataset.choice);
+      const correct = parseInt(btn.dataset.correct);
+      btn.classList.add(choice === correct ? 'correct' : 'wrong');
+      if (choice === correct) {
+        m.triviaScore += 100;
+        $get('triviaScore').textContent = m.triviaScore;
+        addPoints(state, 50, 'Trivia Express');
+      }
+      setTimeout(() => { m.triviaIdx++; nextTriviaQuestion(); }, 800);
+    }));
+}
+
+function endTrivia() {
+  const m = state.currentMode;
+  const max = m.totalQ * 100;
+  const pct = (m.triviaScore / max) * 100;
+  addPoints(state, m.triviaScore, 'Trivia Express complété');
+  showToast('⚡', 'Trivia terminée !', `${m.triviaScore}/${max} (${pct.toFixed(0)}%)`);
+  completeMode();
+}
+
+// ============================================================
+// MODE 10 — GALERIE PHOTO (NEW)
+// ============================================================
+function startGallery() {
+  // Show all found works as a personal gallery
+  const foundWorks = state.foundWorks
+    .map(id => WORKS_DATA.find(w => w.id === id))
+    .filter(w => w);
+
+  showView('galleryView', `
+    <header class="mode-header" style="background:${MODES.gallery.color}">
+      ${backBtn('gallery')}
+      <h2>🖼️ Galerie Photo</h2>
+      <p>${foundWorks.length} œuvre${foundWorks.length > 1 ? 's' : ''} découverte${foundWorks.length > 1 ? 's' : ''}</p>
+    </header>
+    <div class="mode-content">
+      <div class="gallery-stats">
+        <span>Photos : ${Object.keys(state.photosTaken).length}</span>
+        <span>Partages : ${state.shareCount}</span>
+        <span>Favoris : ${state.foundWorks.length}</span>
+      </div>
+      <div class="gallery-grid" id="galleryGrid">
+        ${foundWorks.length === 0
+          ? '<p class="empty-msg">Aucune œuvre découverte encore. Explore Alma !</p>'
+          : foundWorks.map(w => `
+            <article class="gallery-card">
+              <div class="gallery-icon">${w.icon}</div>
+              <h3>${w.name}</h3>
+              <span>${CATEGORIES[w.category].label}</span>
+            </article>
+          `).join('')}
+      </div>
+    </div>
+  `);
+}
+
+// ============================================================
+// MODE 11 — TABLEAU PROF (NEW)
+// ============================================================
+function startTeacher() {
+  // Simulated dashboard for a teacher tracking students
+  const studentStats = (state.teacherStats && state.teacherStats.length)
+    ? state.teacherStats
+    : generateMockStudents();
+
+  if (!state.teacherStats) state.teacherStats = studentStats;
+
+  showView('teacherView', `
+    <header class="mode-header" style="background:${MODES.teacher.color}">
+      ${backBtn('teacher')}
+      <h2>👩‍🏫 Tableau Prof</h2>
+      <p>${studentStats.length} élèves dans la classe</p>
+    </header>
+    <div class="mode-content">
+      <div class="teacher-stats">
+        <div class="teacher-stat">
+          <div class="stat-label">Élèves actifs</div>
+          <div class="stat-value">${studentStats.filter(s => s.lastActive > Date.now() - 3600000).length}/${studentStats.length}</div>
+        </div>
+        <div class="teacher-stat">
+          <div class="stat-label">Œuvres totales</div>
+          <div class="stat-value">${studentStats.reduce((sum, s) => sum + s.worksFound, 0)}</div>
+        </div>
+      </div>
+      <div class="teacher-table">
+        ${studentStats.map((s, i) => `
+          <article class="teacher-row" data-student="${i}">
+            <div class="teacher-name">${s.name}</div>
+            <div class="teacher-bar">
+              <div class="teacher-bar-fill" style="width:${(s.worksFound / 50) * 100}%"></div>
+            </div>
+            <div class="teacher-count">${s.worksFound}/50</div>
+            <div class="teacher-score">${s.score} pts</div>
+          </article>
+        `).join('')}
+      </div>
+      <button class="btn-secondary" id="teacherExport">📥 Exporter CSV</button>
+    </div>
+  `);
+  $get('teacherExport').onclick = exportTeacherCSV;
+}
+
+function generateMockStudents() {
+  const names = ['Alice', 'Bob', 'Charlie', 'Daria', 'Eve', 'Frank', 'Grace', 'Hugo'];
+  return names.map(name => ({
+    name,
+    worksFound: Math.floor(Math.random() * 50),
+    score: Math.floor(Math.random() * 5000),
+    lastActive: Date.now() - Math.floor(Math.random() * 7200000)
+  }));
+}
+
+function exportTeacherCSV() {
+  const students = state.teacherStats || [];
+  const csv = 'Nom,Oeuvres,Score,Activite\n' +
+    students.map(s =>
+      `${s.name},${s.worksFound},${s.score},${new Date(s.lastActive).toLocaleString('fr-CA')}`
+    ).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `rallye-alma-classe-${Date.now()}.csv`;
+  a.click();
+  showToast('📥', 'CSV exporté !', `${students.length} élèves`);
 }
