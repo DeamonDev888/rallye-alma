@@ -46,6 +46,7 @@ function switchView(viewName) {
   // Refresh data on view switch
   if (viewName === 'worksView') renderWorksGrid();
   if (viewName === 'badgesView') renderBadgesGrid();
+  if (viewName === 'modesView' && typeof showModeSelector === 'function') showModeSelector();
   if (viewName === 'mapView' && map) {
     setTimeout(() => map.invalidateSize(), 100);
   }
