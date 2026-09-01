@@ -1086,3 +1086,86 @@ button:focus-visible, input:focus-visible {
   color: var(--color-text-light);
   font-weight: 300;
 }
+
+/* === HALL OF FAME === */
+.hof-content {
+  padding: var(--space-md);
+  max-width: 720px;
+  margin: 0 auto;
+}
+.hof-section {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+.hof-section h3 {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin-bottom: var(--space-md);
+  color: var(--color-secondary);
+}
+.hof-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.hof-rank {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.hof-rank:last-child { border-bottom: none; }
+.hof-rank-num {
+  font-weight: 700;
+  font-size: 16px;
+  width: 32px;
+  color: var(--color-text-light);
+}
+.rank-1 .hof-rank-num { color: gold; font-size: 20px; }
+.rank-2 .hof-rank-num { color: silver; font-size: 18px; }
+.rank-3 .hof-rank-num { color: #cd7f32; font-size: 18px; }
+.hof-name { flex: 1; font-weight: 500; }
+.hof-score { font-weight: 700; color: var(--color-primary); }
+.hof-score small { color: var(--color-text-light); font-weight: 400; }
+.hof-empty {
+  text-align: center;
+  padding: var(--space-lg);
+  color: var(--color-text-light);
+  font-style: italic;
+}
+.hof-submit {
+  background: var(--color-card);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  box-shadow: 0 2px 8px var(--color-shadow);
+}
+.hof-submit h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  margin-bottom: var(--space-sm);
+}
+.hof-submit form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.hof-submit input {
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 14px;
+}
+.hof-submit button {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
