@@ -1,620 +1,96 @@
 /* ============================================================
-   MODES — Système de modes de jeu
-   5 modes : Visite Guidée, Quiz Battle, Photo Mission,
-             Time Attack, Pédagogie
+   MODES — Système de modes de jeu pour Rallye Alma
+   8 modes : Visite Guidée, Quiz Battle, Photo Mission, Time Attack,
+             Pédagogie, Histoires, Mission Créative, Thématique
+   Refactorisé : helper DRY + DRY par mode
    ============================================================ */
 
+// === SHARED HELPERS ===
+function $get(id) { return document.getElementById(id); }
+
+function showView(id, html) {
+  const el = $get(id);
+  if (!el) return;
+  el.innerHTML = html;
+  el.style.display = 'block';
+}
+
+function hideView(id) {
+  const el = $get(id);
+  if (el) el.style.display = 'none';
+}
+
+function backBtn(modeId) {
+  return `<button class="back-btn" onclick="exitMode('${modeId}')">← Quitter</button>`;
+}
+
+function progress(current, total) {
+  const pct = (current / total) * 100;
+  return `
+    <div class="progress-info">
+      <span>${current}/${total}</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+  `;
+}
+
+function pickRandom(arr, n) {
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+}
+
+function getNearestWorks(origin, count, radiusMeters = 2000) {
+  return WORKS_DATA
+    .map(w => ({ w, dist: getDistance(origin[0], origin[1], w.coords[0], w.coords[1]) }))
+    .filter(x => x.dist <= radiusMeters)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, count)
+    .map(x => x.w);
+}
+
+// === MODE REGISTRY ===
 const MODES = {
-  guided: {
-    id: "guided",
-    name: "Visite Guidée",
-    icon: "🚶",
-    color: "#457B9D",
-    description: "Suivez un parcours automatique avec narration audio",
-    duration: "60-90 min",
-    works: 10,
-    level: "Tous",
-    features: [
-      "Audio narré pour chaque œuvre",
-      "GPS guide le parcours",
-      "Pas de quiz — focus histoire",
-      "Idéal pour familles"
-    ]
-  },
-  battle: {
-    id: "battle",
-    name: "Quiz Battle",
-    icon: "⚔️",
-    color: "#E63946",
-    description: "Affrontez une autre classe en quiz rapide",
-    duration: "20-30 min",
-    works: 15,
-    level: "Secondaire",
-    features: [
-      "1v1 ou équipe vs équipe",
-      "Questions chronométrées (10s)",
-      "Classement live",
-      "Mode Battle Royale (3-10 classes)"
-    ]
-  },
-  photo: {
-    id: "photo",
-    name: "Photo Mission",
-    icon: "📸",
-    color: "#F4A261",
-    description: "Relevez des défis créatifs devant chaque œuvre",
-    duration: "2-3 heures",
-    works: 20,
-    level: "Primaire+",
-    features: [
-      "Mission créative par œuvre",
-      "Galerie des meilleures photos",
-      "Vote du public",
-      "AR filters disponibles"
-    ]
-  },
-  timeattack: {
-    id: "timeattack",
-    name: "Time Attack",
-    icon: "⏱️",
-    color: "#2A9D8F",
-    description: "Trouvez le max d'œuvres en temps limité",
-    duration: "30 min ou 2h",
-    works: 50,
-    level: "Tous",
-    features: [
-      "Chronomètre par catégorie",
-      "Bonus temps pour les œuvres rares",
-      "Classement par temps",
-      "Mode Sprint (30min) ou Marathon (2h)"
-    ]
-  },
-  pedagogy: {
-    id: "pedagogy",
-    name: "Pédagogie",
-    icon: "🎓",
-    color: "#8B4513",
-    description: "Quiz adaptés au niveau scolaire avec progression",
-    duration: "Selon niveau",
-    works: 50,
-    level: "Primaire / Secondaire / Collégial",
-    features: [
-      "3 niveaux : Primaire (6-12), Secondaire (13-17), Collégial (18+)",
-      "Questions adaptées au curriculum QC",
-      "Rapport de progression par compétence",
-      "Compatible avec bulletin scolaire"
-    ]
-  }
+  guided:    { name: 'Visite Guidée', icon: '🚶', color: '#457B9D', desc: 'Suivez un parcours auto', dur: '60-90 min', works: 10 },
+  battle:    { name: 'Quiz Battle', icon: '⚔️', color: '#E63946', desc: 'Affrontez en quiz rapide', dur: '20-30 min', works: 15 },
+  photo:     { name: 'Photo Mission', icon: '📸', color: '#F4A261', desc: 'Défis créatifs', dur: '2-3 heures', works: 20 },
+  timeattack:{ name: 'Time Attack', icon: '⏱️', color: '#2A9D8F', desc: 'Max œuvres en 30 min', dur: '30 min', works: 50 },
+  pedagogy:  { name: 'Pédagogie', icon: '🎓', color: '#8B4513', desc: 'Quiz par niveau scolaire', dur: 'Variable', works: 50 },
+  histoires: { name: 'Histoires', icon: '📖', color: '#9B59B6', desc: 'Histoires vraies d\'Alma', dur: '30 min', works: 8 },
+  creative:  { name: 'Mission Créative', icon: '🎨', color: '#16A085', desc: 'Crée autour des œuvres', dur: '3 heures', works: 10 },
+  thematic:  { name: 'Thématique Saisonnière', icon: '❄️', color: '#3498DB', desc: 'Œuvres selon la saison', dur: '45 min', works: 12 }
 };
 
 let currentMode = null;
 
 function showModeSelector() {
-  const grid = document.getElementById('modesGrid');
+  const grid = $get('modesGrid');
   if (!grid) return;
-
-  grid.innerHTML = Object.values(MODES).map(mode => `
-    <article class="mode-card" data-mode="${mode.id}" style="border-left: 4px solid ${mode.color}">
-      <div class="mode-icon">${mode.icon}</div>
-      <h3>${mode.name}</h3>
-      <p class="mode-desc">${mode.description}</p>
+  grid.innerHTML = Object.entries(MODES).map(([id, m]) => `
+    <article class="mode-card" data-mode="${id}" style="border-left: 4px solid ${m.color}">
+      <div class="mode-icon">${m.icon}</div>
+      <h3>${m.name}</h3>
+      <p class="mode-desc">${m.desc}</p>
       <div class="mode-meta">
-        <span class="mode-badge">⏱️ ${mode.duration}</span>
-        <span class="mode-badge">🏛️ ${mode.works} œuvres</span>
-        <span class="mode-badge">📚 ${mode.level}</span>
+        <span class="mode-badge">⏱️ ${m.dur}</span>
+        <span class="mode-badge">🏛️ ${m.works} œuvres</span>
       </div>
-      <button class="btn-mode-start" data-mode="${mode.id}">
-        Démarrer
-      </button>
+      <button class="btn-mode-start" data-mode="${id}">Démarrer</button>
     </article>
   `).join('');
-
-  // Bind start buttons
   grid.querySelectorAll('.btn-mode-start').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      startMode(btn.dataset.mode);
-    });
+    btn.addEventListener('click', () => startMode(btn.dataset.mode));
   });
 }
 
 function startMode(modeId) {
-  const mode = MODES[modeId];
-  if (!mode) return;
-
-  currentMode = mode;
-  state.currentMode = {
-    id: modeId,
-    startTime: Date.now(),
-    foundWorks: [],
-    score: 0,
-    completed: false
-  };
-
+  currentMode = modeId;
+  state.currentMode = { id: modeId, startTime: Date.now(), foundWorks: [], score: 0, completed: false };
   saveState(state);
   switchView(modeId + 'View');
-
-  // Dispatch to mode-specific starter
-  if (modeId === 'guided') startGuidedMode();
-  else if (modeId === 'battle') startBattleMode();
-  else if (modeId === 'photo') startPhotoMode();
-  else if (modeId === 'timeattack') startTimeAttackMode();
-  else if (modeId === 'pedagogy') startPedagogyMode();
-}
-
-// === MODE: VISITE GUIDÉE ===
-function startGuidedMode() {
-  const mode = state.currentMode;
-  // Pick 10 works close to a starting point
-  const startWork = WORKS_DATA[Math.floor(Math.random() * 10)];
-  const guidedWorks = [startWork];
-
-  // Find nearby works
-  for (const work of WORKS_DATA) {
-    if (guidedWorks.length >= 10) break;
-    const dist = getDistance(startWork.coords[0], startWork.coords[1],
-                              work.coords[0], work.coords[1]);
-    if (dist < 2000) guidedWorks.push(work);
-  }
-
-  mode.works = guidedWorks.map(w => w.id);
-
-  // Show guided UI
-  const guidedView = document.getElementById('guidedView');
-  if (!guidedView) return;
-
-  guidedView.innerHTML = `
-    <header class="mode-header" style="background: ${MODES.guided.color}">
-      <button class="back-btn" onclick="exitMode()">← Quitter</button>
-      <h2>🚶 Visite Guidée d'Alma</h2>
-      <p>Suivez le parcours, écoutez l'histoire</p>
-    </header>
-    <div class="mode-content">
-      <div class="guided-progress">
-        <div class="progress-info">
-          <span id="guidedCurrent">1</span>/<span id="guidedTotal">10</span>
-        </div>
-        <div class="progress-bar"><div class="progress-fill" id="guidedProgressFill"></div></div>
-      </div>
-      <div class="guided-next" id="guidedNext">
-        <h3>📍 Prochaine œuvre</h3>
-        <p>Approchez-vous pour commencer</p>
-      </div>
-      <div class="guided-current-work" id="guidedCurrentWork" style="display:none">
-        <div class="guided-hero">🎯</div>
-        <h2 id="guidedTitle"></h2>
-        <p id="guidedDesc"></p>
-        <button class="btn-secondary" id="guidedNextBtn">Continuer →</button>
-      </div>
-    </div>
-  `;
-
-  showNextGuidedWork();
-}
-
-function showNextGuidedWork() {
-  const mode = state.currentMode;
-  const idx = mode.foundWorks.length;
-  if (idx >= mode.works.length) {
-    completeMode();
-    return;
-  }
-
-  document.getElementById('guidedCurrent').textContent = idx + 1;
-  document.getElementById('guidedTotal').textContent = mode.works.length;
-  const pct = (idx / mode.works.length) * 100;
-  document.getElementById('guidedProgressFill').style.width = pct + '%';
-
-  if (idx > 0) {
-    const prevWork = WORKS_DATA.find(w => w.id === mode.works[idx - 1]);
-    document.getElementById('guidedCurrentWork').style.display = 'block';
-    document.getElementById('guidedNext').style.display = 'none';
-    document.getElementById('guidedTitle').textContent = prevWork.name;
-    document.getElementById('guidedDesc').textContent = prevWork.description;
-  }
-
-  const nextWorkId = mode.works[idx];
-  const nextWork = WORKS_DATA.find(w => w.id === nextWorkId);
-  document.getElementById('guidedNext').innerHTML = `
-    <h3>📍 Prochaine œuvre</h3>
-    <p>${nextWork.name} — ${(getDistanceFromCurrent(nextWork.coords[0], nextWork.coords[1]) / 1000).toFixed(1)} km</p>
-  `;
-}
-
-// === MODE: QUIZ BATTLE ===
-function startBattleMode() {
-  const battleView = document.getElementById('battleView');
-  if (!battleView) return;
-
-  battleView.innerHTML = `
-    <header class="mode-header" style="background: ${MODES.battle.color}">
-      <button class="back-btn" onclick="exitMode()">← Quitter</button>
-      <h2>⚔️ Quiz Battle</h2>
-      <p>Affrontez en quiz rapide</p>
-    </header>
-    <div class="mode-content">
-      <div class="battle-lobby" id="battleLobby">
-        <h3>Choisissez votre mode</h3>
-        <div class="battle-modes">
-          <button class="mode-option" data-battle="solo">🎯 Solo (10 questions)</button>
-          <button class="mode-option" data-battle="duel">⚔️ Duel 1v1 (15 questions)</button>
-          <button class="mode-option" data-battle="royale">👥 Battle Royale (3-10 joueurs)</button>
-        </div>
-      </div>
-      <div class="battle-quiz" id="battleQuiz" style="display:none">
-        <div class="battle-hud">
-          <div class="battle-player" id="battlePlayer1">
-            <div class="battle-name">VOUS</div>
-            <div class="battle-score" id="battleScore1">0</div>
-          </div>
-          <div class="battle-timer" id="battleTimer">10</div>
-          <div class="battle-player" id="battlePlayer2">
-            <div class="battle-name">CPU</div>
-            <div class="battle-score" id="battleScore2">0</div>
-          </div>
-        </div>
-        <div class="battle-question">
-          <h3 id="battleQuestion"></h3>
-          <div id="battleChoices" class="battle-choices"></div>
-        </div>
-      </div>
-      <div class="battle-result" id="battleResult" style="display:none"></div>
-    </div>
-  `;
-
-  document.querySelectorAll('.mode-option').forEach(btn => {
-    btn.addEventListener('click', () => startBattleRound(btn.dataset.battle));
-  });
-}
-
-function startBattleRound(mode) {
-  state.currentMode.battleMode = mode;
-  state.currentMode.score1 = 0;
-  state.currentMode.score2 = 0;
-  state.currentMode.currentQ = 0;
-  state.currentMode.totalQ = mode === 'solo' ? 10 : 15;
-
-  document.getElementById('battleLobby').style.display = 'none';
-  document.getElementById('battleQuiz').style.display = 'block';
-
-  nextBattleQuestion();
-}
-
-function nextBattleQuestion() {
-  const mode = state.currentMode;
-  if (mode.currentQ >= mode.totalQ) {
-    endBattle();
-    return;
-  }
-
-  // Random work question
-  const work = WORKS_DATA[Math.floor(Math.random() * WORKS_DATA.length)];
-  if (!work.quiz) return nextBattleQuestion();
-
-  document.getElementById('battleQuestion').textContent = work.quiz.question;
-  document.getElementById('battleChoices').innerHTML = work.quiz.choices.map((c, i) => `
-    <button class="battle-choice" data-choice="${i}" data-correct="${work.quiz.correct}">
-      ${String.fromCharCode(65 + i)}. ${c}
-    </button>
-  `).join('');
-
-  // Timer
-  let timeLeft = 10;
-  document.getElementById('battleTimer').textContent = timeLeft;
-  const timer = setInterval(() => {
-    timeLeft--;
-    document.getElementById('battleTimer').textContent = timeLeft;
-    if (timeLeft <= 0) {
-      clearInterval(timer);
-      cpuAnswers();
-    }
-  }, 1000);
-  mode.timer = timer;
-
-  // Bind choices
-  document.querySelectorAll('.battle-choice').forEach(btn => {
-    btn.addEventListener('click', () => {
-      clearInterval(mode.timer);
-      const choice = parseInt(btn.dataset.choice);
-      const correct = parseInt(btn.dataset.correct);
-
-      btn.classList.add(choice === correct ? 'correct' : 'wrong');
-      if (choice === correct) {
-        mode.score1 += 100;
-        document.getElementById('battleScore1').textContent = mode.score1;
-      }
-
-      // CPU answers
-      setTimeout(() => {
-        cpuAnswers();
-        setTimeout(() => nextBattleQuestion(), 1500);
-      }, 500);
-    });
-  });
-}
-
-function cpuAnswers() {
-  const mode = state.currentMode;
-  const correct = Math.random() < 0.65; // 65% accuracy
-  if (correct) {
-    mode.score2 += 100;
-    document.getElementById('battleScore2').textContent = mode.score2;
-  }
-  mode.currentQ++;
-}
-
-function endBattle() {
-  const mode = state.currentMode;
-  const won = mode.score1 > mode.score2;
-  document.getElementById('battleQuiz').style.display = 'none';
-  const result = document.getElementById('battleResult');
-  result.style.display = 'block';
-  result.innerHTML = `
-    <h3>${won ? '🏆 Victoire !' : '💪 Bonne tentative !'}</h3>
-    <p>Score final : <strong>${mode.score1}</strong> vs <strong>${mode.score2}</strong></p>
-    <button class="btn-secondary" onclick="exitMode()">Retour aux modes</button>
-  `;
-  addPoints(state, won ? 200 : 50, 'Quiz Battle');
-}
-
-// === MODE: PHOTO MISSION ===
-function startPhotoMode() {
-  const photoView = document.getElementById('photoView');
-  if (!photoView) return;
-
-  // Pick 20 random works with creative missions
-  const missions = [
-    "Prends une photo créative avec l'œuvre",
-    "Photographie l'œuvre sous un angle inhabituel",
-    "Capture l'œuvre avec le paysage en arrière-plan",
-    "Fais un selfie avec l'œuvre",
-    "Photographie un détail artistique de l'œuvre"
-  ];
-
-  const selectedWorks = [...WORKS_DATA]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, 20)
-    .map(w => ({
-      ...w,
-      mission: missions[Math.floor(Math.random() * missions.length)]
-    }));
-
-  state.currentMode.photoWorks = selectedWorks;
-  state.currentMode.photoIdx = 0;
-
-  photoView.innerHTML = `
-    <header class="mode-header" style="background: ${MODES.photo.color}">
-      <button class="back-btn" onclick="exitMode()">← Quitter</button>
-      <h2>📸 Photo Mission</h2>
-      <p>20 œuvres, 20 défis créatifs</p>
-    </header>
-    <div class="mode-content">
-      <div class="photo-progress">
-        <span id="photoCurrent">1</span>/<span id="photoTotal">20</span>
-      </div>
-      <div class="photo-mission" id="photoMission"></div>
-      <div class="photo-actions">
-        <button class="btn-secondary" id="photoCamera">📷 Prendre photo</button>
-        <button class="btn-secondary" id="photoSkip">⏭️ Passer</button>
-      </div>
-    </div>
-  `;
-
-  showNextPhoto();
-}
-
-function showNextPhoto() {
-  const mode = state.currentMode;
-  const idx = mode.photoIdx;
-  if (idx >= mode.photoWorks.length) {
-    completeMode();
-    return;
-  }
-  const w = mode.photoWorks[idx];
-  document.getElementById('photoCurrent').textContent = idx + 1;
-  document.getElementById('photoTotal').textContent = mode.photoWorks.length;
-  document.getElementById('photoMission').innerHTML = `
-    <div class="photo-work-hero">${w.icon}</div>
-    <h3>${w.name}</h3>
-    <p class="photo-mission-text">🎯 ${w.mission}</p>
-  `;
-
-  document.getElementById('photoCamera').onclick = () => {
-    addPoints(state, 50, 'Photo Mission');
-    savePhoto(state, w.id, 'photo:poc');
-    mode.photoIdx++;
-    showNextPhoto();
+  const starters = {
+    guided: startGuided, battle: startBattle, photo: startPhoto, timeattack: startTimeAttack,
+    pedagogy: startPedagogy, histoires: startHistoires, creative: startCreative, thematic: startThematic
   };
-  document.getElementById('photoSkip').onclick = () => {
-    mode.photoIdx++;
-    showNextPhoto();
-  };
-}
-
-// === MODE: TIME ATTACK ===
-function startTimeAttackMode() {
-  const taView = document.getElementById('timeattackView');
-  if (!taView) return;
-
-  const sprintDuration = 30 * 60; // 30 min for sprint
-
-  taView.innerHTML = `
-    <header class="mode-header" style="background: ${MODES.timeattack.color}">
-      <button class="back-btn" onclick="exitMode()">← Quitter</button>
-      <h2>⏱️ Time Attack</h2>
-      <p>Trouvez le plus d'œuvres en 30 minutes</p>
-    </header>
-    <div class="mode-content">
-      <div class="ta-timer" id="taTimer">30:00</div>
-      <div class="ta-stats">
-        <div class="stat">
-          <div class="stat-label">Œuvres</div>
-          <div class="stat-value" id="taCount">0</div>
-        </div>
-        <div class="stat">
-          <div class="stat-label">Score</div>
-          <div class="stat-value" id="taScore">0</div>
-        </div>
-      </div>
-      <div class="ta-categories" id="taCategories"></div>
-      <button class="btn-secondary" id="taStart">Démarrer le chrono</button>
-    </div>
-  `;
-
-  document.getElementById('taCategories').innerHTML = Object.entries(CATEGORIES).map(([k, c]) => `
-    <div class="ta-cat">
-      <span>${c.icon} ${c.label}</span>
-      <span class="ta-cat-count" id="taCat-${k}">0</span>
-    </div>
-  `).join('');
-
-  document.getElementById('taStart').onclick = () => {
-    state.currentMode.startTime = Date.now();
-    const timer = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - state.currentMode.startTime) / 1000);
-      const remaining = sprintDuration - elapsed;
-      if (remaining <= 0) {
-        clearInterval(timer);
-        endTimeAttack();
-        return;
-      }
-      const mins = Math.floor(remaining / 60);
-      const secs = remaining % 60;
-      document.getElementById('taTimer').textContent =
-        `${mins}:${secs.toString().padStart(2, '0')}`;
-    }, 1000);
-  };
-}
-
-function endTimeAttack() {
-  const mode = state.currentMode;
-  const score = mode.score || 0;
-  const count = mode.foundWorks.length;
-  addPoints(state, score, 'Time Attack terminé');
-  completeMode();
-  showToast('⏱️', 'Temps écoulé !', `${count} œuvres, ${score} points`);
-}
-
-// === MODE: PÉDAGOGIE ===
-function startPedagogyMode() {
-  const pedagoView = document.getElementById('pedagogyView');
-  if (!pedagoView) return;
-
-  pedagoView.innerHTML = `
-    <header class="mode-header" style="background: ${MODES.pedagogy.color}">
-      <button class="back-btn" onclick="exitMode()">← Quitter</button>
-      <h2>🎓 Pédagogie</h2>
-      <p>Quiz adaptés au curriculum QC</p>
-    </header>
-    <div class="mode-content">
-      <div class="pedago-levels">
-        <h3>Choisissez votre niveau</h3>
-        <button class="mode-option" data-level="primaire">📚 Primaire (6-12 ans)</button>
-        <button class="mode-option" data-level="secondaire">🎒 Secondaire (13-17 ans)</button>
-        <button class="mode-option" data-level="collegial">🎓 Collégial (18+)</button>
-      </div>
-      <div class="pedago-quiz" id="pedagoQuiz" style="display:none">
-        <div class="pedago-progress">
-          <span id="pedagoCurrent">0</span>/<span id="pedagoTotal">15</span>
-        </div>
-        <div class="pedago-question" id="pedagoQuestion"></div>
-        <div class="pedago-choices" id="pedagoChoices"></div>
-      </div>
-      <div class="pedago-result" id="pedagoResult" style="display:none"></div>
-    </div>
-  `;
-
-  document.querySelectorAll('[data-level]').forEach(btn => {
-    btn.addEventListener('click', () => startPedagogyRound(btn.dataset.level));
-  });
-}
-
-function startPedagogyRound(level) {
-  state.currentMode.level = level;
-  state.currentMode.pedagoScore = 0;
-  state.currentMode.pedagoIdx = 0;
-  state.currentMode.totalQ = 15;
-
-  // Adjust difficulty based on level
-  state.currentMode.difficulty = level === 'primaire' ? 0.7 : level === 'secondaire' ? 1.0 : 1.3;
-
-  document.querySelector('.pedago-levels').style.display = 'none';
-  document.getElementById('pedagoQuiz').style.display = 'block';
-  document.getElementById('pedagoTotal').textContent = 15;
-
-  nextPedagogyQuestion();
-}
-
-function nextPedagogyQuestion() {
-  const mode = state.currentMode;
-  if (mode.pedagoIdx >= mode.totalQ) {
-    endPedagogy();
-    return;
-  }
-
-  const work = WORKS_DATA[Math.floor(Math.random() * WORKS_DATA.length)];
-  if (!work.quiz) return nextPedagogyQuestion();
-
-  document.getElementById('pedagoCurrent').textContent = mode.pedagoIdx + 1;
-  document.getElementById('pedagoQuestion').textContent = work.quiz.question;
-  document.getElementById('pedagoChoices').innerHTML = work.quiz.choices.map((c, i) => `
-    <button class="pedago-choice" data-choice="${i}" data-correct="${work.quiz.correct}">
-      ${String.fromCharCode(65 + i)}. ${c}
-    </button>
-  `).join('');
-
-  document.querySelectorAll('.pedago-choice').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const choice = parseInt(btn.dataset.choice);
-      const correct = parseInt(btn.dataset.correct);
-      btn.classList.add(choice === correct ? 'correct' : 'wrong');
-
-      if (choice === correct) {
-        mode.pedagoScore += 100;
-        addPoints(state, 50, 'Quiz Pédagogie');
-      }
-
-      setTimeout(() => {
-        mode.pedagoIdx++;
-        nextPedagogyQuestion();
-      }, 1200);
-    });
-  });
-}
-
-function endPedagogy() {
-  const mode = state.currentMode;
-  const pct = (mode.pedagoScore / (mode.totalQ * 100)) * 100;
-  document.getElementById('pedagoQuiz').style.display = 'none';
-  const result = document.getElementById('pedagoResult');
-  result.style.display = 'block';
-  result.innerHTML = `
-    <h3>📊 Résultat</h3>
-    <div class="result-stat">
-      <span>Niveau</span>
-      <strong>${mode.level}</strong>
-    </div>
-    <div class="result-stat">
-      <span>Score</span>
-      <strong>${mode.pedagoScore}/${mode.totalQ * 100}</strong>
-    </div>
-    <div class="result-stat">
-      <span>Pourcentage</span>
-      <strong>${pct.toFixed(0)}%</strong>
-    </div>
-    <p>${pct >= 80 ? '🏆 Excellent !' : pct >= 60 ? '👍 Bien !' : '📚 À améliorer'}</p>
-    <button class="btn-secondary" onclick="exitMode()">Retour</button>
-  `;
-}
-
-// === COMMON ===
-function completeMode() {
-  const mode = state.currentMode;
-  mode.completed = true;
-  addPoints(state, 300, 'Mode complété');
-  showToast('🏆', 'Mode complété !', '+300 points');
-  updateUI();
-  setTimeout(() => exitMode(), 3000);
+  if (starters[modeId]) starters[modeId]();
 }
 
 function exitMode() {
@@ -624,7 +100,547 @@ function exitMode() {
   switchView('modesView');
 }
 
-function getDistanceFromCurrent(lat, lng) {
-  if (!state.currentLocation) return Infinity;
-  return getDistance(state.currentLocation.lat, state.currentLocation.lng, lat, lng);
+function completeMode() {
+  if (!state.currentMode) return;
+  state.currentMode.completed = true;
+  addPoints(state, 300, 'Mode complété');
+  showToast('🏆', 'Mode complété !', '+300 points');
+  updateUI();
+  setTimeout(exitMode, 2500);
+}
+
+// ============================================================
+// MODE 1 — VISITE GUIDÉE
+// ============================================================
+function startGuided() {
+  const start = WORKS_DATA[Math.floor(Math.random() * 10)];
+  const works = [start, ...getNearestWorks(start.coords, 9).filter(w => w.id !== start.id)];
+  state.currentMode.works = works.map(w => w.id);
+
+  showView('guidedView', `
+    <header class="mode-header" style="background:${MODES.guided.color}">
+      ${backBtn('guided')}
+      <h2>🚶 Visite Guidée d'Alma</h2>
+      <p>Suivez le parcours, écoutez l'histoire</p>
+    </header>
+    <div class="mode-content">
+      <div id="guidedProgress">${progress(0, 10)}</div>
+      <div class="guided-next" id="guidedNext">
+        <h3>📍 Approchez-vous pour commencer</h3>
+      </div>
+      <div class="guided-current-work" id="guidedCurrentWork" style="display:none">
+        <div class="guided-hero">🎯</div>
+        <h2 id="guidedTitle"></h2>
+        <p id="guidedDesc"></p>
+        <button class="btn-secondary" id="guidedNextBtn">Continuer →</button>
+      </div>
+    </div>
+  `);
+
+  $get('guidedNextBtn')?.addEventListener('click', () => nextGuided());
+}
+
+function nextGuided() {
+  const mode = state.currentMode;
+  const idx = mode.foundWorks.length;
+  if (idx >= mode.works.length) return completeMode();
+
+  if (idx > 0) {
+    const prevId = mode.works[idx - 1];
+    const prev = WORKS_DATA.find(w => w.id === prevId);
+    if (!state.foundWorks.includes(prevId)) markFound(state, prevId);
+    $get('guidedCurrentWork').style.display = 'block';
+    $get('guidedNext').style.display = 'none';
+    $get('guidedTitle').textContent = prev.name;
+    $get('guidedDesc').textContent = prev.description;
+  }
+
+  const next = WORKS_DATA.find(w => w.id === mode.works[idx]);
+  const distKm = state.currentLocation
+    ? (getDistance(state.currentLocation.lat, state.currentLocation.lng, next.coords[0], next.coords[1]) / 1000).toFixed(1)
+    : '?';
+  $get('guidedProgress').innerHTML = progress(idx, mode.works.length);
+  $get('guidedNext').innerHTML = `
+    <h3>📍 Prochaine œuvre</h3>
+    <p>${next.name} — ${distKm} km</p>
+    <button class="btn-secondary" id="guidedNextBtn">J'y suis →</button>
+  `;
+  $get('guidedNextBtn').onclick = () => nextGuided();
+}
+
+// ============================================================
+// MODE 2 — QUIZ BATTLE
+// ============================================================
+function startBattle() {
+  showView('battleView', `
+    <header class="mode-header" style="background:${MODES.battle.color}">
+      ${backBtn('battle')}
+      <h2>⚔️ Quiz Battle</h2>
+    </header>
+    <div class="mode-content">
+      <div class="battle-modes" id="battleLobby">
+        <h3>Mode</h3>
+        <button class="mode-option" data-battle="solo">🎯 Solo (10 questions)</button>
+        <button class="mode-option" data-battle="duel">⚔️ Duel 1v1 (15)</button>
+        <button class="mode-option" data-battle="royale">👥 Royale (3-10)</button>
+      </div>
+      <div class="battle-quiz" id="battleQuiz" style="display:none">
+        <div class="battle-hud">
+          <div class="battle-player"><div class="battle-name">VOUS</div><div class="battle-score" id="battleScore1">0</div></div>
+          <div class="battle-timer" id="battleTimer">10</div>
+          <div class="battle-player"><div class="battle-name">CPU</div><div class="battle-score" id="battleScore2">0</div></div>
+        </div>
+        <div class="battle-question">
+          <h3 id="battleQuestion"></h3>
+          <div id="battleChoices" class="battle-choices"></div>
+        </div>
+      </div>
+      <div class="battle-result" id="battleResult" style="display:none"></div>
+    </div>
+  `);
+  document.querySelectorAll('.mode-option').forEach(btn =>
+    btn.addEventListener('click', () => startBattleRound(btn.dataset.battle)));
+}
+
+function startBattleRound(mode) {
+  state.currentMode.battleMode = mode;
+  state.currentMode.score1 = 0;
+  state.currentMode.score2 = 0;
+  state.currentMode.currentQ = 0;
+  state.currentMode.totalQ = mode === 'solo' ? 10 : 15;
+  $get('battleLobby').style.display = 'none';
+  $get('battleQuiz').style.display = 'block';
+  nextBattleQuestion();
+}
+
+function nextBattleQuestion() {
+  const m = state.currentMode;
+  if (m.currentQ >= m.totalQ) return endBattle();
+
+  const work = WORKS_DATA[Math.floor(Math.random() * WORKS_DATA.length)];
+  if (!work.quiz) return nextBattleQuestion();
+
+  $get('battleQuestion').textContent = work.quiz.question;
+  $get('battleChoices').innerHTML = work.quiz.choices.map((c, i) =>
+    `<button class="battle-choice" data-choice="${i}" data-correct="${work.quiz.correct}">${String.fromCharCode(65 + i)}. ${c}</button>`
+  ).join('');
+
+  let timeLeft = 10;
+  $get('battleTimer').textContent = timeLeft;
+  if (m.timer) clearInterval(m.timer);
+  m.timer = setInterval(() => {
+    if (--timeLeft <= 0) {
+      clearInterval(m.timer);
+      cpuAnswers();
+      setTimeout(nextBattleQuestion, 1500);
+    } else $get('battleTimer').textContent = timeLeft;
+  }, 1000);
+
+  document.querySelectorAll('.battle-choice').forEach(btn => {
+    btn.addEventListener('click', () => {
+      clearInterval(m.timer);
+      const choice = parseInt(btn.dataset.choice);
+      const correct = parseInt(btn.dataset.correct);
+      btn.classList.add(choice === correct ? 'correct' : 'wrong');
+      if (choice === correct) {
+        m.score1 += 100;
+        $get('battleScore1').textContent = m.score1;
+      }
+      setTimeout(() => { cpuAnswers(); setTimeout(nextBattleQuestion, 1500); }, 500);
+    });
+  });
+}
+
+function cpuAnswers() {
+  const m = state.currentMode;
+  if (Math.random() < 0.65) {
+    m.score2 += 100;
+    $get('battleScore2').textContent = m.score2;
+  }
+  m.currentQ++;
+}
+
+function endBattle() {
+  const m = state.currentMode;
+  const won = m.score1 > m.score2;
+  $get('battleQuiz').style.display = 'none';
+  $get('battleResult').style.display = 'block';
+  $get('battleResult').innerHTML = `
+    <h3>${won ? '🏆 Victoire !' : '💪 Bonne tentative !'}</h3>
+    <p>Score final : <strong>${m.score1}</strong> vs <strong>${m.score2}</strong></p>
+    <button class="btn-secondary" onclick="exitMode()">Retour aux modes</button>
+  `;
+  addPoints(state, won ? 200 : 50, 'Quiz Battle');
+}
+
+// ============================================================
+// MODE 3 — PHOTO MISSION
+// ============================================================
+const PHOTO_MISSIONS = [
+  'Photo créative avec l\'œuvre',
+  'Angle inhabituel',
+  'Œuvre + paysage',
+  'Selfie avec l\'œuvre',
+  'Détail artistique'
+];
+
+function startPhoto() {
+  const selected = pickRandom(WORKS_DATA, 20).map(w => ({
+    ...w,
+    mission: PHOTO_MISSIONS[Math.floor(Math.random() * PHOTO_MISSIONS.length)]
+  }));
+  state.currentMode.photoWorks = selected;
+  state.currentMode.photoIdx = 0;
+
+  showView('photoView', `
+    <header class="mode-header" style="background:${MODES.photo.color}">
+      ${backBtn('photo')}
+      <h2>📸 Photo Mission</h2>
+      <p>20 œuvres, 20 défis</p>
+    </header>
+    <div class="mode-content">
+      <div class="photo-progress">
+        <span id="photoCurrent">1</span>/<span id="photoTotal">20</span>
+      </div>
+      <div class="photo-mission" id="photoMission"></div>
+      <div class="photo-actions">
+        <button class="btn-secondary" id="photoCamera">📷 Prendre</button>
+        <button class="btn-secondary" id="photoSkip">⏭️ Passer</button>
+      </div>
+    </div>
+  `);
+  showNextPhoto();
+}
+
+function showNextPhoto() {
+  const m = state.currentMode;
+  const idx = m.photoIdx;
+  if (idx >= m.photoWorks.length) return completeMode();
+  const w = m.photoWorks[idx];
+  $get('photoCurrent').textContent = idx + 1;
+  $get('photoTotal').textContent = m.photoWorks.length;
+  $get('photoMission').innerHTML = `
+    <div class="photo-work-hero">${w.icon}</div>
+    <h3>${w.name}</h3>
+    <p class="photo-mission-text">🎯 ${w.mission}</p>
+  `;
+  $get('photoCamera').onclick = () => {
+    addPoints(state, 50, 'Photo Mission');
+    savePhoto(state, w.id, 'photo:poc');
+    m.photoIdx++;
+    showNextPhoto();
+  };
+  $get('photoSkip').onclick = () => { m.photoIdx++; showNextPhoto(); };
+}
+
+// ============================================================
+// MODE 4 — TIME ATTACK
+// ============================================================
+function startTimeAttack() {
+  showView('timeattackView', `
+    <header class="mode-header" style="background:${MODES.timeattack.color}">
+      ${backBtn('timeattack')}
+      <h2>⏱️ Time Attack</h2>
+      <p>30 min pour trouver le max d'œuvres</p>
+    </header>
+    <div class="mode-content">
+      <div class="ta-timer" id="taTimerText">30:00</div>
+      <div class="ta-stats">
+        <div class="stat"><div class="stat-label">Œuvres</div><div class="stat-value" id="taCount">0</div></div>
+        <div class="stat"><div class="stat-label">Score</div><div class="stat-value" id="taScore">0</div></div>
+      </div>
+      <div class="ta-categories" id="taCategories">${Object.entries(CATEGORIES).map(([k, c]) =>
+        `<div class="ta-cat"><span>${c.icon} ${c.label}</span><span class="ta-cat-count" id="taCat-${k}">0</span></div>`
+      ).join('')}</div>
+      <button class="btn-secondary" id="taStart">Démarrer le chrono</button>
+    </div>
+  `);
+  $get('taStart').onclick = () => {
+    const sprintDuration = 30 * 60;
+    if (state.currentMode.timer) clearInterval(state.currentMode.timer);
+    state.currentMode.startTime = Date.now();
+    state.currentMode.timer = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - state.currentMode.startTime) / 1000);
+      const remaining = sprintDuration - elapsed;
+      if (remaining <= 0) {
+        clearInterval(state.currentMode.timer);
+        endTimeAttack();
+        return;
+      }
+      const txt = $get('taTimerText');
+      if (txt) txt.textContent =
+        `${Math.floor(remaining / 60)}:${(remaining % 60).toString().padStart(2, '0')}`;
+    }, 1000);
+  };
+}
+
+function endTimeAttack() {
+  const m = state.currentMode;
+  addPoints(state, m.score || 0, 'Time Attack');
+  showToast('⏱️', 'Temps écoulé !', `${m.foundWorks.length} œuvres`);
+  completeMode();
+}
+
+// ============================================================
+// MODE 5 — PÉDAGOGIE
+// ============================================================
+function startPedagogy() {
+  showView('pedagogyView', `
+    <header class="mode-header" style="background:${MODES.pedagogy.color}">
+      ${backBtn('pedagogy')}
+      <h2>🎓 Pédagogie</h2>
+      <p>Quiz adaptés au curriculum QC</p>
+    </header>
+    <div class="mode-content">
+      <div class="pedago-levels" id="pedagoLevels">
+        <h3>Niveau</h3>
+        <button class="mode-option" data-level="primaire">📚 Primaire (6-12)</button>
+        <button class="mode-option" data-level="secondaire">🎒 Secondaire (13-17)</button>
+        <button class="mode-option" data-level="collegial">🎓 Collégial (18+)</button>
+      </div>
+      <div class="pedago-quiz" id="pedagoQuiz" style="display:none">
+        <div class="pedago-progress"><span id="pedagoCurrent">0</span>/<span id="pedagoTotal">15</span></div>
+        <div class="pedago-question" id="pedagoQuestion"></div>
+        <div class="pedago-choices" id="pedagoChoices"></div>
+      </div>
+      <div class="pedago-result" id="pedagoResult" style="display:none"></div>
+    </div>
+  `);
+  document.querySelectorAll('[data-level]').forEach(btn =>
+    btn.addEventListener('click', () => startPedagogyRound(btn.dataset.level)));
+}
+
+function startPedagogyRound(level) {
+  state.currentMode.level = level;
+  state.currentMode.pedagoScore = 0;
+  state.currentMode.pedagoIdx = 0;
+  state.currentMode.totalQ = 15;
+  $get('pedagoLevels').style.display = 'none';
+  $get('pedagoQuiz').style.display = 'block';
+  nextPedagogyQuestion();
+}
+
+function nextPedagogyQuestion() {
+  const m = state.currentMode;
+  if (m.pedagoIdx >= m.totalQ) return endPedagogy();
+  const work = WORKS_DATA[Math.floor(Math.random() * WORKS_DATA.length)];
+  if (!work.quiz) return nextPedagogyQuestion();
+  $get('pedagoCurrent').textContent = m.pedagoIdx + 1;
+  $get('pedagoQuestion').textContent = work.quiz.question;
+  $get('pedagoChoices').innerHTML = work.quiz.choices.map((c, i) =>
+    `<button class="pedago-choice" data-choice="${i}" data-correct="${work.quiz.correct}">${String.fromCharCode(65 + i)}. ${c}</button>`
+  ).join('');
+  document.querySelectorAll('.pedago-choice').forEach(btn =>
+    btn.addEventListener('click', () => {
+      const choice = parseInt(btn.dataset.choice);
+      const correct = parseInt(btn.dataset.correct);
+      btn.classList.add(choice === correct ? 'correct' : 'wrong');
+      if (choice === correct) {
+        m.pedagoScore += 100;
+        addPoints(state, 50, 'Quiz Pédagogie');
+      }
+      setTimeout(() => { m.pedagoIdx++; nextPedagogyQuestion(); }, 1200);
+    }));
+}
+
+function endPedagogy() {
+  const m = state.currentMode;
+  const pct = (m.pedagoScore / (m.totalQ * 100)) * 100;
+  $get('pedagoQuiz').style.display = 'none';
+  $get('pedagoResult').style.display = 'block';
+  $get('pedagoResult').innerHTML = `
+    <h3>📊 Résultat</h3>
+    <div class="result-stat"><span>Niveau</span><strong>${m.level}</strong></div>
+    <div class="result-stat"><span>Score</span><strong>${m.pedagoScore}/${m.totalQ * 100}</strong></div>
+    <div class="result-stat"><span>Pourcentage</span><strong>${pct.toFixed(0)}%</strong></div>
+    <p>${pct >= 80 ? '🏆 Excellent !' : pct >= 60 ? '👍 Bien !' : '📚 À améliorer'}</p>
+    <button class="btn-secondary" onclick="exitMode()">Retour</button>
+  `;
+}
+
+// ============================================================
+// MODE 6 — HISTOIRES (NEW)
+// ============================================================
+// Histoires vraies d'Alma : anecdotes, témoignages, événements
+function startHistoires() {
+  const stories = [
+    { title: 'L\'inondation de 1947', content: 'En mai 1947, une inondation catastrophique a submergé une grande partie d\'Alma, forçant l\'évacuation de milliers de résidants. L\'événement a marqué à jamais la communauté et a mené à la construction de nouvelles infrastructures de drainage.' },
+    { title: 'L\'usine d\'aluminium', content: 'L\'usine d\'Alma, fondée en 1943, est l\'une des plus anciennes du Québec. Elle a employé des générations d\'Almois et a façonné l\'économie régionale.' },
+    { title: 'Le chemin de fer', content: 'Le chemin de fer a été déterminant dans la colonisation d\'Alma au début du 20e siècle, permettant l\'arrivée de milliers de pionniers.' },
+    { title: 'Le barrage Isle-Maligne', content: 'Construit en 1925, le barrage Isle-Maligne est l\'un des plus anciens ouvrages hydroélectriques du Québec. Il alimentait initialement l\'usine d\'aluminium.' },
+    { title: 'La scierie d\'Alma', content: 'Au 19e siècle, l\'industrie forestière était le moteur économique d\'Alma, avec plusieurs scieries qui employaient des centaines d\'ouvriers.' },
+    { title: 'Le couvent des Sœurs', content: 'Fondé en 1912, le couvent des Sœurs du Bon-Conseil a formé plus de 3000 enseignantes qui ont éduqué les générations suivantes.' },
+    { title: 'Le 50e anniversaire d\'Alma', content: 'En 1967, Alma a célébré son 50e anniversaire avec festivités, monuments commémoratifs, et la visite de dignitaires provinciaux.' },
+    { title: 'La Véloroute des Bleuets', content: 'Inaugurée en 1998, la Véloroute fait le tour du lac Saint-Jean, soit 256 km de piste cyclable qui attire des milliers de touristes annuellement.' }
+  ];
+
+  showView('histoiresView', `
+    <header class="mode-header" style="background:${MODES.histoires.color}">
+      ${backBtn('histoires')}
+      <h2>📖 Histoires d'Alma</h2>
+      <p>8 récits authentiques</p>
+    </header>
+    <div class="mode-content">
+      <div class="story-list" id="storyList">
+        ${stories.map((s, i) => `
+          <article class="story-card" data-story="${i}">
+            <h3>${s.title}</h3>
+            <button class="btn-secondary">Lire</button>
+          </article>
+        `).join('')}
+      </div>
+      <div class="story-content" id="storyContent" style="display:none">
+        <button class="back-btn" id="storyBack">← Retour aux histoires</button>
+        <h2 id="storyTitle"></h2>
+        <p id="storyText"></p>
+        <button class="btn-secondary" id="storyQuiz">Faire le quiz</button>
+      </div>
+    </div>
+  `);
+  document.querySelectorAll('.story-card').forEach(card => {
+    card.addEventListener('click', () => showStory(stories, parseInt(card.dataset.story)));
+  });
+}
+
+function showStory(stories, idx) {
+  $get('storyList').style.display = 'none';
+  $get('storyContent').style.display = 'block';
+  $get('storyTitle').textContent = stories[idx].title;
+  $get('storyText').textContent = stories[idx].content;
+  $get('storyQuiz').onclick = () => {
+    // Quiz simple sur l'histoire
+    alert('Quiz à implémenter — fonctionnalité V1.1');
+  };
+  $get('storyBack').onclick = () => {
+    $get('storyList').style.display = 'block';
+    $get('storyContent').style.display = 'none';
+  };
+  addPoints(state, 25, 'Histoire lue');
+}
+
+// ============================================================
+// MODE 7 — MISSION CRÉATIVE (NEW)
+// ============================================================
+// Création libre autour des œuvres : poèmes, dessins, photos créatives
+function startCreative() {
+  const selected = pickRandom(WORKS_DATA, 10);
+  const missions = [
+    'Écris un poème de 8 vers sur cette œuvre',
+    'Dessine l\'œuvre de mémoire',
+    'Prends une photo en noir et blanc',
+    'Compose un acrostiche avec le nom de l\'œuvre',
+    'Imagine une histoire de fiction courte',
+    'Crée un haïku (3 vers)',
+    'Fais un croquis en 5 minutes',
+    'Prends 3 photos sous 3 angles différents',
+    'Écris une lettre à l\'œuvre',
+    'Compose une chanson courte'
+  ];
+  state.currentMode.creativeWorks = selected.map((w, i) => ({
+    ...w,
+    mission: missions[i]
+  }));
+  state.currentMode.creativeIdx = 0;
+  state.currentMode.created = [];
+
+  showView('creativeView', `
+    <header class="mode-header" style="background:${MODES.creative.color}">
+      ${backBtn('creative')}
+      <h2>🎨 Mission Créative</h2>
+      <p>10 œuvres, 10 missions d'art</p>
+    </header>
+    <div class="mode-content">
+      <div class="creative-progress">
+        <span id="creativeCurrent">1</span>/<span id="creativeTotal">10</span>
+        · Créations : <span id="creativeCount">0</span>
+      </div>
+      <div class="creative-mission" id="creativeMission"></div>
+      <div class="creative-actions">
+        <button class="btn-secondary" id="creativeDone">✓ Terminé</button>
+        <button class="btn-secondary" id="creativeSkip">⏭️ Passer</button>
+      </div>
+    </div>
+  `);
+  showNextCreative();
+}
+
+function showNextCreative() {
+  const m = state.currentMode;
+  const idx = m.creativeIdx;
+  if (idx >= m.creativeWorks.length) return completeMode();
+  const w = m.creativeWorks[idx];
+  $get('creativeCurrent').textContent = idx + 1;
+  $get('creativeTotal').textContent = m.creativeWorks.length;
+  $get('creativeCount').textContent = m.created.length;
+  $get('creativeMission').innerHTML = `
+    <div class="creative-work-hero">${w.icon}</div>
+    <h3>${w.name}</h3>
+    <p class="creative-mission-text">🎨 ${w.mission}</p>
+  `;
+  $get('creativeDone').onclick = () => {
+    m.created.push({ id: w.id, mission: w.mission, ts: Date.now() });
+    m.creativeIdx++;
+    addPoints(state, 75, 'Création complétée');
+    showNextCreative();
+  };
+  $get('creativeSkip').onclick = () => { m.creativeIdx++; showNextCreative(); };
+}
+
+// ============================================================
+// MODE 8 — THÉMATIQUE SAISONNIÈRE (NEW)
+// ============================================================
+// Le mode s'adapte à la saison actuelle (hiver, printemps, été, automne)
+const SEASONAL_THEMES = {
+  winter: { icon: '❄️', color: '#3498DB', name: 'Hiver', works: ['patrimoine', 'industrie'] },
+  spring: { icon: '🌸', color: '#27AE60', name: 'Printemps', works: ['nature'] },
+  summer: { icon: '☀️', color: '#F39C12', name: 'Été', works: ['nature', 'savoir'] },
+  autumn: { icon: '🍂', color: '#D35400', name: 'Automne', works: ['nature', 'patrimoine'] }
+};
+
+function getCurrentSeason() {
+  const m = new Date().getMonth() + 1; // 1-12
+  if (m === 12 || m <= 2) return 'winter';
+  if (m <= 5) return 'spring';
+  if (m <= 8) return 'summer';
+  return 'autumn';
+}
+
+function startThematic() {
+  const season = getCurrentSeason();
+  const theme = SEASONAL_THEMES[season];
+  const works = WORKS_DATA.filter(w => theme.works.includes(w.category));
+  const selected = pickRandom(works, 12);
+
+  state.currentMode.season = season;
+  state.currentMode.thematicWorks = selected;
+
+  showView('thematicView', `
+    <header class="mode-header" style="background:${theme.color}">
+      ${backBtn('thematic')}
+      <h2>${theme.icon} Thématique ${theme.name}</h2>
+      <p>12 œuvres de saison</p>
+    </header>
+    <div class="mode-content">
+      <div class="thematic-progress"><span id="thematicCurrent">0</span>/<span id="thematicTotal">12</span></div>
+      <div class="thematic-list" id="thematicList">
+        ${selected.map((w, i) => `
+          <article class="thematic-card" data-thematic="${i}">
+            <div class="thematic-icon">${w.icon}</div>
+            <h3>${w.name}</h3>
+            <span>${CATEGORIES[w.category].label}</span>
+          </article>
+        `).join('')}
+      </div>
+    </div>
+  `);
+  document.querySelectorAll('.thematic-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.thematic);
+      const work = selected[idx];
+      markFound(state, work.id);
+      addPoints(state, 50, `Thématique ${theme.name}`);
+      $get('thematicCurrent').textContent = state.foundWorks.filter(id => selected.find(w => w.id === id)).length;
+      if (parseInt($get('thematicCurrent').textContent) >= 12) completeMode();
+    });
+  });
 }
