@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#E63946"/>
+
+  <!-- Outer ring -->
+  <circle cx="50" cy="50" r="44" fill="none" stroke="white" stroke-width="3"/>
+
+  <!-- Trophy/Cup shape -->
+  <path d="M 30 25 L 70 25 L 68 50 C 68 60 60 65 50 65 C 40 65 32 60 32 50 Z" fill="white"/>
+  <rect x="42" y="65" width="16" height="8" fill="white"/>
+  <rect x="35" y="73" width="30" height="6" rx="2" fill="white"/>
+
+  <!-- Handles -->
+  <path d="M 30 30 Q 22 30 22 38 Q 22 46 30 46" fill="none" stroke="white" stroke-width="3"/>
+  <path d="M 70 30 Q 78 30 78 38 Q 78 46 70 46" fill="none" stroke="white" stroke-width="3"/>
+
+  <!-- Number 50 -->
+  <text x="50" y="58" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="bold" fill="#E63946">50</text>
+
+  <!-- Stars around -->
+  <text x="20" y="20" font-size="10" fill="white">⭐</text>
+  <text x="72" y="20" font-size="10" fill="white">⭐</text>
+  <text x="20" y="86" font-size="10" fill="white">⭐</text>
+  <text x="72" y="86" font-size="10" fill="white">⭐</text>
+</svg>

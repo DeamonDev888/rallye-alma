@@ -1,0 +1,17 @@
+{
+  "name": "Rallye des 50 d'Alma",
+  "short_name": "Rallye Alma",
+  "description": "Encyclopédie géolocalisée pour découvrir les 50 œuvres d'Alma",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAFCFF",
+  "theme_color": "#E63946",
+  "icons": [
+    {
+      "src": "assets/svg/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

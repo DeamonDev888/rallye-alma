@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#E63946">
+  <meta name="description" content="Le Rallye des 50 d'Alma — Encyclopédie géolocalisée des œuvres de la ville">
+  <title>Rallye des 50 d'Alma · Encyclopédie géolocalisée</title>
+  <link rel="stylesheet" href="src/css/style.css">
+  <link rel="icon" type="image/svg+xml" href="assets/svg/logo.svg">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="logo-container">
+      <img src="assets/svg/logo.svg" alt="Rallye Alma" class="logo">
+      <div class="logo-text">
+        <h1>Rallye des 50 d'Alma</h1>
+        <p class="tagline">Encyclopédie géolocalisée</p>
+      </div>
+    </div>
+    <div class="user-stats">
+      <div class="stat-badge" title="Points">
+        <span class="stat-icon">⭐</span>
+        <span class="stat-value" id="userPoints">0</span>
+      </div>
+      <div class="stat-badge" title="Œuvres trouvées">
+        <span class="stat-icon">🏛️</span>
+        <span class="stat-value"><span id="userFound">0</span>/50</span>
+      </div>
+      <div class="stat-badge" title="Badges">
+        <span class="stat-icon">🎖️</span>
+        <span class="stat-value" id="userBadges">0</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN VIEW -->
+  <main class="app-main">
+    <!-- MAP VIEW -->
+    <section id="mapView" class="view active">
+      <div id="map"></div>
+      <div class="map-overlay">
+        <button id="locateBtn" class="fab" title="Ma position">
+          <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6a1 1 0 0 1 1 1v2.07a8 8 0 0 1 6.93 6.93H22a1 1 0 1 1 0 2h-2.07a8 8 0 0 1-6.93 6.93V22a1 1 0 1 1-2 0v-2.07a8 8 0 0 1-6.93-6.93H2a1 1 0 1 1 0-2h2.07A8 8 0 0 1 11 3.07V3a1 1 0 0 1 1-1Z"/></svg>
+        </button>
+      </div>
+      <div class="proximity-alert" id="proximityAlert"></div>
+    </section>
+
+    <!-- ENCYCLOPEDIA VIEW -->
+    <section id="worksView" class="view">
+      <header class="view-header">
+        <h2>Les 50 œuvres d'Alma</h2>
+        <input type="search" id="searchWorks" placeholder="Rechercher une œuvre...">
+      </header>
+      <div class="works-filters">
+        <button class="filter-chip active" data-filter="all">Toutes</button>
+        <button class="filter-chip" data-filter="patrimoine">Patrimoine</button>
+        <button class="filter-chip" data-filter="art">Art public</button>
+        <button class="filter-chip" data-filter="nature">Nature</button>
+        <button class="filter-chip" data-filter="industrie">Industrie</button>
+        <button class="filter-chip" data-filter="savoir">Savoir</button>
+      </div>
+      <div class="works-grid" id="worksGrid"></div>
+    </section>
+
+    <!-- WORK DETAIL VIEW -->
+    <section id="workDetailView" class="view">
+      <button class="back-btn" id="backToWorks">← Retour</button>
+      <div class="work-detail" id="workDetail"></div>
+    </section>
+
+    <!-- BADGES VIEW -->
+    <section id="badgesView" class="view">
+      <header class="view-header">
+        <h2>Vos badges</h2>
+        <p>Collectionnez-les tous en explorant Alma</p>
+      </header>
+      <div class="badges-grid" id="badgesGrid"></div>
+    </section>
+  </main>
+
+  <!-- BOTTOM NAVIGATION -->
+  <nav class="bottom-nav">
+    <button class="nav-btn active" data-view="mapView">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M20.5 3l-.16.03L15 5.1 9 3 3.36 4.9c-.21.07-.36.25-.36.48V20.5c0 .28.22.5.5.5l.16-.03L9 18.9l6 2.1 5.64-1.9c.21-.07.36-.25.36-.48V3.5c0-.28-.22-.5-.5-.5zM15 19l-6-2.11V5l6 2.11V19z"/></svg>
+      <span>Carte</span>
+    </button>
+    <button class="nav-btn" data-view="worksView">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M19 2H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H8V4h11v12zM4 6H2v15c0 1.1.9 2 2 2h15v-2H4V6z"/></svg>
+      <span>Œuvres</span>
+    </button>
+    <button class="nav-btn" data-view="badgesView">
+      <svg viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      <span>Badges</span>
+    </button>
+  </nav>
+
+  <!-- QUIZ MODAL -->
+  <div class="modal-overlay" id="quizModal" style="display:none">
+    <div class="modal-content">
+      <h3 id="quizQuestion"></h3>
+      <div id="quizChoices" class="quiz-choices"></div>
+      <div id="quizResult" class="quiz-result"></div>
+      <button class="btn-secondary" id="closeQuiz">Fermer</button>
+    </div>
+  </div>
+
+  <!-- Toast notifications -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="src/js/data.js"></script>
+  <script src="src/js/storage.js"></script>
+  <script src="src/js/gamification.js"></script>
+  <script src="src/js/encyclopedia.js"></script>
+  <script src="src/js/quiz.js"></script>
+  <script src="src/js/map.js"></script>
+  <script src="src/js/app.js"></script>
+</body>
+</html>
