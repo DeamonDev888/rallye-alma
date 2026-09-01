@@ -39,7 +39,8 @@ function renderWorksGrid() {
   grid.innerHTML = works.map(work => `
     <article class="work-card ${state.foundWorks.includes(work.id) ? 'found' : ''}" data-work-id="${work.id}">
       <div class="work-card-image">
-        ${work.icon}
+        <img src="${getWorkPhoto(work).url}" alt="${work.name}" loading="lazy"
+             onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'work-card-emoji\\'>${work.icon}</div>'">
       </div>
       <div class="work-card-content">
         <div class="work-card-category">${CATEGORIES[work.category].icon} ${CATEGORIES[work.category].label}</div>
@@ -73,7 +74,10 @@ function showWorkDetail(workId) {
   const isFound = state.foundWorks.includes(work.id);
 
   detail.innerHTML = `
-    <div class="work-detail-hero">${work.icon}</div>
+    <div class="work-detail-hero">
+      <img src="${getWorkPhotoHero(work).url}" alt="${work.name}"
+           onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'work-detail-emoji\\'>${work.icon}</div>'">
+    </div>
     <h2>${work.name}</h2>
     <div class="work-detail-meta">
       <span>${cat.icon} ${cat.label}</span>

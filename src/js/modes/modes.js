@@ -1,7 +1,7 @@
 /* ============================================================
    MODES — Système de modes de jeu pour Rallye Alma
-   8 modes : Visite Guidée, Quiz Battle, Photo Mission, Time Attack,
-             Pédagogie, Histoires, Mission Créative, Thématique
+   11 parcours : Visite Guidée, Quiz Interactif, Mission Photo, Mode Express,
+             Pédagogie, Récits d'Alma, Atelier Créatif, Circuit Saisonnier, Quiz Rapide, Galerie Photo, Tableau Prof
    Refactorisé : helper DRY + DRY par mode
    ============================================================ */
 
@@ -49,15 +49,15 @@ function getNearestWorks(origin, count, radiusMeters = 2000) {
 
 // === MODE REGISTRY ===
 const MODES = {
-  guided:    { name: 'Visite Guidée', icon: '🚶', color: '#457B9D', desc: 'Suivez un parcours auto', dur: '60-90 min', works: 10 },
-  battle:    { name: 'Quiz Battle', icon: '⚔️', color: '#E63946', desc: 'Affrontez en quiz rapide', dur: '20-30 min', works: 15 },
-  photo:     { name: 'Photo Mission', icon: '📸', color: '#F4A261', desc: 'Défis créatifs', dur: '2-3 heures', works: 20 },
-  timeattack:{ name: 'Time Attack', icon: '⏱️', color: '#2A9D8F', desc: 'Max œuvres en 30 min', dur: '30 min', works: 50 },
+  guided:    { name: 'Visite Guidée', icon: '🚶', color: '#457B9D', desc: 'Parcours guidé automatique', dur: '60-90 min', works: 10 },
+  battle:    { name: 'Quiz Interactif', icon: '⚔️', color: '#E63946', desc: 'Quiz chronometré', dur: '20-30 min', works: 15 },
+  photo:     { name: 'Mission Photo', icon: '📸', color: '#F4A261', desc: 'Défis créatifs', dur: '2-3 heures', works: 20 },
+  timeattack:{ name: 'Mode Express', icon: '⏱️', color: '#2A9D8F', desc: 'Max œuvres en 30 min', dur: '30 min', works: 50 },
   pedagogy:  { name: 'Pédagogie', icon: '🎓', color: '#8B4513', desc: 'Quiz par niveau scolaire', dur: 'Variable', works: 50 },
   histoires: { name: 'Histoires', icon: '📖', color: '#9B59B6', desc: 'Histoires vraies d\'Alma', dur: '30 min', works: 8 },
-  creative:  { name: 'Mission Créative', icon: '🎨', color: '#16A085', desc: 'Crée autour des œuvres', dur: '3 heures', works: 10 },
-  thematic:  { name: 'Thématique Saisonnière', icon: '❄️', color: '#3498DB', desc: 'Œuvres selon la saison', dur: '45 min', works: 12 },
-  trivia:    { name: 'Trivia Express', icon: '⚡', color: '#E67E22', desc: '10 questions en 60s', dur: '1 min', works: 10 },
+  creative:  { name: 'Atelier Créatif', icon: '🎨', color: '#16A085', desc: 'Créez autour des œuvres', dur: '3 heures', works: 10 },
+  thematic:  { name: 'Circuit Saisonnier', icon: '❄️', color: '#3498DB', desc: 'Œuvres de la saison', dur: '45 min', works: 12 },
+  trivia:    { name: 'Quiz Rapide', icon: '⚡', color: '#E67E22', desc: '10 questions, 60 secondes', dur: '1 min', works: 10 },
   gallery:   { name: 'Galerie Photo', icon: '🖼️', color: '#1ABC9C', desc: 'Tes œuvres préférées', dur: 'Libre', works: 50 },
   teacher:   { name: 'Tableau Prof', icon: '👩‍🏫', color: '#34495E', desc: 'Dashboard enseignant', dur: 'Live', works: 50 }
 };
@@ -76,7 +76,7 @@ function showModeSelector() {
         <span class="mode-badge">⏱️ ${m.dur}</span>
         <span class="mode-badge">🏛️ ${m.works} œuvres</span>
       </div>
-      <button class="btn-mode-start" data-mode="${id}">Démarrer</button>
+      <button class="btn-mode-start" data-mode="${id}">Lancer</button>
     </article>
   `).join('');
   grid.querySelectorAll('.btn-mode-start').forEach(btn => {
@@ -107,8 +107,8 @@ function exitMode() {
 function completeMode() {
   if (!state.currentMode) return;
   state.currentMode.completed = true;
-  addPoints(state, 300, 'Mode complété');
-  showToast('🏆', 'Mode complété !', '+300 points');
+  addPoints(state, 300, 'Parcours terminé');
+  showToast('🏆', 'Parcours terminé !', '+300 points');
   updateUI();
   setTimeout(exitMode, 2500);
 }
@@ -179,14 +179,14 @@ function startBattle() {
   showView('battleView', `
     <header class="mode-header" style="background:${MODES.battle.color}">
       ${backBtn('battle')}
-      <h2>⚔️ Quiz Battle</h2>
+      <h2>⚔️ Quiz Interactif</h2>
     </header>
     <div class="mode-content">
       <div class="battle-modes" id="battleLobby">
         <h3>Mode</h3>
         <button class="mode-option" data-battle="solo">🎯 Solo (10 questions)</button>
         <button class="mode-option" data-battle="duel">⚔️ Duel 1v1 (15)</button>
-        <button class="mode-option" data-battle="royale">👥 Royale (3-10)</button>
+        <button class="mode-option" data-battle="royale">👥 En groupe (3-10)</button>
       </div>
       <div class="battle-quiz" id="battleQuiz" style="display:none">
         <div class="battle-hud">
@@ -274,7 +274,7 @@ function endBattle() {
     <p>Score final : <strong>${m.score1}</strong> vs <strong>${m.score2}</strong></p>
     <button class="btn-secondary" onclick="exitMode()">Retour aux modes</button>
   `;
-  addPoints(state, won ? 200 : 50, 'Quiz Battle');
+  addPoints(state, won ? 200 : 50, 'Quiz Interactif');
 }
 
 // ============================================================
@@ -299,7 +299,7 @@ function startPhoto() {
   showView('photoView', `
     <header class="mode-header" style="background:${MODES.photo.color}">
       ${backBtn('photo')}
-      <h2>📸 Photo Mission</h2>
+      <h2>📸 Mission Photo</h2>
       <p>20 œuvres, 20 défis</p>
     </header>
     <div class="mode-content">
@@ -329,7 +329,7 @@ function showNextPhoto() {
     <p class="photo-mission-text">🎯 ${w.mission}</p>
   `;
   $get('photoCamera').onclick = () => {
-    addPoints(state, 50, 'Photo Mission');
+    addPoints(state, 50, 'Mission Photo');
     savePhoto(state, w.id, 'photo:poc');
     m.photoIdx++;
     showNextPhoto();
@@ -344,7 +344,7 @@ function startTimeAttack() {
   showView('timeattackView', `
     <header class="mode-header" style="background:${MODES.timeattack.color}">
       ${backBtn('timeattack')}
-      <h2>⏱️ Time Attack</h2>
+      <h2>⏱️ Mode Express</h2>
       <p>30 min pour trouver le max d'œuvres</p>
     </header>
     <div class="mode-content">
@@ -356,7 +356,7 @@ function startTimeAttack() {
       <div class="ta-categories" id="taCategories">${Object.entries(CATEGORIES).map(([k, c]) =>
         `<div class="ta-cat"><span>${c.icon} ${c.label}</span><span class="ta-cat-count" id="taCat-${k}">0</span></div>`
       ).join('')}</div>
-      <button class="btn-secondary" id="taStart">Démarrer le chrono</button>
+      <button class="btn-secondary" id="taStart">Lancer le chrono</button>
     </div>
   `);
   $get('taStart').onclick = () => {
@@ -380,7 +380,7 @@ function startTimeAttack() {
 
 function endTimeAttack() {
   const m = state.currentMode;
-  addPoints(state, m.score || 0, 'Time Attack');
+  addPoints(state, m.score || 0, 'Mode Express');
   showToast('⏱️', 'Temps écoulé !', `${m.foundWorks.length} œuvres`);
   completeMode();
 }
@@ -465,7 +465,7 @@ function endPedagogy() {
 // ============================================================
 // MODE 6 — HISTOIRES (NEW)
 // ============================================================
-// Histoires vraies d'Alma : anecdotes, témoignages, événements
+// Récits d'Alma : anecdotes, témoignages, événements
 function startHistoires() {
   const stories = [
     { title: 'L\'inondation de 1947', content: 'En mai 1947, une inondation catastrophique a submergé une grande partie d\'Alma, forçant l\'évacuation de milliers de résidants. L\'événement a marqué à jamais la communauté et a mené à la construction de nouvelles infrastructures de drainage.' },
@@ -550,7 +550,7 @@ function startCreative() {
   showView('creativeView', `
     <header class="mode-header" style="background:${MODES.creative.color}">
       ${backBtn('creative')}
-      <h2>🎨 Mission Créative</h2>
+      <h2>🎨 Atelier Créatif</h2>
       <p>10 œuvres, 10 missions d'art</p>
     </header>
     <div class="mode-content">
@@ -660,7 +660,7 @@ function startTrivia() {
   showView('triviaView', `
     <header class="mode-header" style="background:${MODES.trivia.color}">
       ${backBtn('trivia')}
-      <h2>⚡ Trivia Express</h2>
+      <h2>⚡ Quiz Rapide</h2>
       <p>10 questions, 60 secondes chacune</p>
     </header>
     <div class="mode-content">
@@ -706,7 +706,7 @@ function nextTriviaQuestion() {
       if (choice === correct) {
         m.triviaScore += 100;
         $get('triviaScore').textContent = m.triviaScore;
-        addPoints(state, 50, 'Trivia Express');
+        addPoints(state, 50, 'Quiz Rapide');
       }
       setTimeout(() => { m.triviaIdx++; nextTriviaQuestion(); }, 800);
     }));
@@ -716,7 +716,7 @@ function endTrivia() {
   const m = state.currentMode;
   const max = m.totalQ * 100;
   const pct = (m.triviaScore / max) * 100;
-  addPoints(state, m.triviaScore, 'Trivia Express complété');
+  addPoints(state, m.triviaScore, 'Quiz Rapide complété');
   showToast('⚡', 'Trivia terminée !', `${m.triviaScore}/${max} (${pct.toFixed(0)}%)`);
   completeMode();
 }
