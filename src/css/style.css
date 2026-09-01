@@ -1028,3 +1028,61 @@ button:focus-visible, input:focus-visible {
   font-size: 96px;
   color: rgba(255,255,255,0.4);
 }
+
+/* === VERIFICATION BADGES === */
+.badge-verified {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: rgba(42,157,143,0.15);
+  color: var(--color-nature);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 700;
+}
+.badge-unverified {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 1px 6px;
+  background: rgba(230,57,70,0.1);
+  color: var(--color-primary);
+  border-radius: var(--radius-pill);
+  font-size: 10px;
+  font-weight: 600;
+}
+.filter-divider {
+  display: inline-flex;
+  align-items: center;
+  color: var(--color-text-light);
+  margin: 0 var(--space-xs);
+  font-weight: 300;
+}
+
+/* === VERIFICATION BADGES (honest data) === */
+.badge-verified {
+  display: inline-block;
+  background: var(--color-nature);
+  color: white;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  margin-left: 6px;
+  font-weight: 700;
+}
+.badge-unverified {
+  display: inline-block;
+  background: #FFE0B2;
+  color: #E65100;
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  margin-left: 6px;
+  font-weight: 700;
+}
+
+/* === FILTER DIVIDER === */
+.filter-divider {
+  margin: 0 4px;
+  color: var(--color-text-light);
+  font-weight: 300;
+}

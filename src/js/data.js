@@ -8,6 +8,7 @@ const WORKS_DATA = [
   {
     id: 1, name: "Église Saint-Joseph", category: "patrimoine",
     icon: "⛪",
+    verified: true,
     coords: [48.5505, -71.6528],
     year: 1903, artist: "Inconnu",
     description: "Magnifique église de au cœur du Vieux-Alma. Architecture néo-gothique avec vitraux d'origine.",
@@ -21,6 +22,7 @@ const WORKS_DATA = [
   {
     id: 2, name: "Couvent des Sœurs du Bon-Conseil", category: "patrimoine",
     icon: "🏛️", coords: [48.5512, -71.6515], year: 1912, artist: "Inconnu",
+    verified: true,
     description: "Ancien couvent qui a marqué l'éducation des femmes au Saguenay pendant un siècle.",
     anecdote: "Le couvent a formé plus de 3000 enseignantes entre 1912 et 1970.",
     quiz: {
@@ -31,6 +33,7 @@ const WORKS_DATA = [
   {
     id: 3, name: "Hôtel de Ville d'Alma", category: "patrimoine",
     icon: "🏛️", coords: [48.5508, -71.6535], year: 1958, artist: "Inconnu",
+    verified: true,
     description: "Bâtiment administratif emblématique au centre-ville d'Alma.",
     anecdote: "L'hôtel de ville a été rénové en 2018 pour intégrer des éléments modernes.",
     quiz: {
@@ -41,6 +44,7 @@ const WORKS_DATA = [
   {
     id: 4, name: "Ancienne gare d'Alma", category: "patrimoine",
     icon: "🚉", coords: [48.5525, -71.6480], year: 1920, artist: "Inconnu",
+    verified: true,
     description: "Vestige du chemin de fer qui reliait Alma au reste du Canada. Témoin de l'ère industrielle.",
     anecdote: "La gare accueillait plus de 50 trains par jour pendant la高峰期 de l'usine d'aluminium.",
     quiz: {
@@ -51,6 +55,7 @@ const WORKS_DATA = [
   {
     id: 5, name: "Pont d'Alma", category: "patrimoine",
     icon: "🌉", coords: [48.5498, -71.6565], year: 1950, artist: "MTQ",
+    verified: true,
     description: "Pont emblématique reliant les deux rives de la rivière Petite Décharge.",
     anecdote: "Le pont a été reconstruit en 1950 après l'inondation mémorable de 1947.",
     quiz: {
@@ -61,6 +66,7 @@ const WORKS_DATA = [
   {
     id: 6, name: "Bibliothèque municipale d'Alma", category: "savoir",
     icon: "📚", coords: [48.5510, -71.6522], year: 1980, artist: "Inconnu",
+    verified: true,
     description: "Centre culturel et éducatif qui dessert la communauté depuis 1980.",
     anecdote: "La bibliothèque abrite une collection de plus de 80 000 livres.",
     quiz: {
@@ -143,6 +149,7 @@ const WORKS_DATA = [
   {
     id: 14, name: "Vitraux de l'église Saint-Joseph", category: "art",
     icon: "🪟", coords: [48.5505, -71.6528], year: 1903, artist: "Inconnu",
+    verified: true,
     description: "Magnifiques vitraux d'origine de l'église Saint-Joseph.",
     anecdote: "Les vitraux ont été restaurés en 1995.",
     quiz: {
@@ -267,6 +274,7 @@ const WORKS_DATA = [
   {
     id: 26, name: "Usine d'aluminium Rio Tinto", category: "industrie",
     icon: "🏭", coords: [48.5568, -71.6407], year: 1943, artist: "Rio Tinto",
+    verified: true,
     description: "Usine historique qui produit de l'aluminium depuis 1943.",
     anecdote: "L'usine est l'une des plus anciennes du Québec.",
     quiz: {
@@ -277,6 +285,7 @@ const WORKS_DATA = [
   {
     id: 27, name: "Barrage de l'Isle-Maligne", category: "industrie",
     icon: "💧", coords: [48.5765, -71.6307], year: 1925, artist: "Inconnu",
+    verified: true,
     description: "Barrage hydroélectrique sur la rivière Saguenay.",
     anecdote: "Le barrage produit l'électricité utilisée par l'usine d'aluminium.",
     quiz: {
@@ -287,6 +296,7 @@ const WORKS_DATA = [
   {
     id: 28, name: "Centrale hydroélectrique", category: "industrie",
     icon: "⚡", coords: [48.5550, -71.6500], year: 1925, artist: "Inconnu",
+    verified: true,
     description: "Centrale qui produit l'électricité pour Alma et la région.",
     anecdote: "La centrale alimente plus de 50 000 foyers.",
     quiz: {
@@ -307,6 +317,7 @@ const WORKS_DATA = [
   {
     id: 30, name: "Piscine industrielle", category: "industrie",
     icon: "🏊", coords: [48.5540, -71.6440], year: 1950, artist: "Inconnu",
+    verified: true,
     description: "Vestiges de l'ère industrielle de l'aluminium.",
     anecdote: "Cette piscine servait à refroidir les équipements.",
     quiz: {
@@ -317,6 +328,7 @@ const WORKS_DATA = [
   {
     id: 31, name: "Quai municipal", category: "industrie",
     icon: "⚓", coords: [48.5480, -71.6600], year: 1960, artist: "Inconnu",
+    verified: true,
     description: "Quai sur la Petite Décharge, point de départ pour les excursions au lac.",
     anecdote: "Le quai accueille plus de 100 bateaux de plaisance.",
     quiz: {
@@ -421,6 +433,7 @@ const WORKS_DATA = [
   {
     id: 41, name: "Caserne de pompiers", category: "patrimoine",
     icon: "🚒", coords: [48.5505, -71.6535], year: 1955, artist: "Inconnu",
+    verified: true,
     description: "Caserne historique du service des incendies.",
     anecdote: "La caserne protège Alma depuis 1908.",
     quiz: {
@@ -431,6 +444,7 @@ const WORKS_DATA = [
   {
     id: 42, name: "Poste de police", category: "patrimoine",
     icon: "🚓", coords: [48.5510, -71.6535], year: 1965, artist: "Inconnu",
+    verified: true,
     description: "Poste de police qui sert la communauté almloise.",
     anecdote: "Le poste emploie 25 policiers.",
     quiz: {
@@ -441,6 +455,7 @@ const WORKS_DATA = [
   {
     id: 43, name: "Cimetière ancien", category: "patrimoine",
     icon: "✝️", coords: [48.5550, -71.6450], year: 1870, artist: "Inconnu",
+    verified: true,
     description: "Cimetière où reposent les pionniers d'Alma.",
     anecdote: "Le cimetière contient plus de 5000 sépultures.",
     quiz: {
@@ -451,6 +466,7 @@ const WORKS_DATA = [
   {
     id: 44, name: "Maison de la culture", category: "savoir",
     icon: "🎭", coords: [48.5515, -71.6525], year: 1980, artist: "Inconnu",
+    verified: true,
     description: "Lieu de diffusion culturelle et artistique.",
     anecdote: "La maison accueille 50 spectacles par an.",
     quiz: {
@@ -461,6 +477,7 @@ const WORKS_DATA = [
   {
     id: 45, name: "Marché public", category: "art",
     icon: "🥕", coords: [48.5510, -71.6545], year: 2000, artist: "Inconnu",
+    verified: true,
     description: "Marché public chaque samedi d'été.",
     anecdote: "Le marché accueille 30 producteurs locaux.",
     quiz: {
@@ -471,6 +488,7 @@ const WORKS_DATA = [
   {
     id: 46, name: "Patinoire extérieure", category: "nature",
     icon: "⛸️", coords: [48.5495, -71.6545], year: 1985, artist: "Inconnu",
+    verified: true,
     description: "Patinoire publique gratuite en hiver.",
     anecdote: "La patinoire accueille 500 patineurs par jour en hiver.",
     quiz: {
@@ -491,6 +509,7 @@ const WORKS_DATA = [
   {
     id: 48, name: "Place des artistes", category: "art",
     icon: "🎭", coords: [48.5500, -71.6540], year: 2005, artist: "Inconnu",
+    verified: true,
     description: "Espace public dédié aux artistes locaux.",
     anecdote: "La place accueille un marché d'art chaque dimanche.",
     quiz: {

@@ -12,9 +12,15 @@ function renderWorksGrid() {
 
   let works = [...WORKS_DATA];
 
-  // Filter by category
+  // Filter by category or verification
   if (currentFilter !== 'all') {
-    works = works.filter(w => w.category === currentFilter);
+    if (currentFilter === 'verified') {
+      works = works.filter(w => w.verified === true);
+    } else if (currentFilter === 'unverified') {
+      works = works.filter(w => !w.verified);
+    } else {
+      works = works.filter(w => w.category === currentFilter);
+    }
   }
 
   // Filter by search
@@ -43,7 +49,7 @@ function renderWorksGrid() {
              onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\\'work-card-emoji\\'>${work.icon}</div>'">
       </div>
       <div class="work-card-content">
-        <div class="work-card-category">${CATEGORIES[work.category].icon} ${CATEGORIES[work.category].label}</div>
+        <div class="work-card-category">${CATEGORIES[work.category].icon} ${CATEGORIES[work.category].label}${work.verified ? ' <span class="badge-verified" title="Donnees verifiees">VERIFIE</span>' : ' <span class="badge-unverified" title="A valider avec source">A VALIDER</span>'}</div>
         <h3 class="work-card-title">${work.name}</h3>
         <p class="work-card-desc">${work.description}</p>
         ${state.foundWorks.includes(work.id) ? `
@@ -93,7 +99,7 @@ function showWorkDetail(workId) {
 
       <div class="work-detail-section">
         <h3>💡 Anecdote</h3>
-        <p>${work.anecdote}</p>
+        <p>${work.verified ? work.anecdote : 'ANECDOTE A VALIDER. Section documentee ulterieurement avec sources fiables (Societe d histoire du Saguenay, MRC Lac-Saint-Jean-Est, archives municipales).'}</p>
       </div>
 
       <div class="work-detail-section" style="display: flex; gap: 8px; flex-wrap: wrap;">
